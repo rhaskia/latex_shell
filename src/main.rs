@@ -16,18 +16,26 @@ fn main() -> io::Result<()> {
     let mut stdout = stdout();
     let mut current = String::new();
 
-    println!("Type something (press 'q' to quit):");
+    println!("welcome");
+    print!("\x1b[2K\r λ ");
+    stdout.flush();
 
     loop {
         if poll(std::time::Duration::from_millis(50))? {
-            if let Event::Key(KeyEvent { code, modifiers, kind: KeyEventKind::Press, .. }) = read()?
-            {
+            if let Event::Key(KeyEvent { code, modifiers, kind: KeyEventKind::Press, .. }) = read()? {
+                let CTRL = KeyModifiers::CONTROL;
                 match code {
-                    KeyCode::Char('q') => break,
-                    KeyCode::Char(c) if modifiers == KeyModifiers::SHIFT => {}
+                    KeyCode::Char('d') if modifiers == CTRL => break,
+                    KeyCode::Char('c') if modifiers == CTRL => break,
+
+                    KeyCode::Backspace => { 
+                        current.pop();
+                        print!("\x1b[2K\r λ {}", render_latex(&current));
+                        stdout.flush();
+                    },
                     KeyCode::Char(c) => {
                         current.push(c);
-                        print!("\r $ {}", render_latex(&current));
+                        print!("\x1b[2K\r λ {}", render_latex(&current));
                         stdout.flush();
                     }
                     _ => (),
