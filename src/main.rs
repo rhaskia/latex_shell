@@ -1,3 +1,5 @@
+#![feature(try_trait_v2)]
+
 use crossterm::event::{KeyEventKind, KeyModifiers};
 use crossterm::{
     event::{poll, read, Event, KeyCode, KeyEvent},
