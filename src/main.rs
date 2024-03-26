@@ -10,7 +10,7 @@ use std::io::Write;
 use std::io::{self, stdout};
 
 mod renderer;
-use renderer::render_latex;
+use renderer::render_md;
 
 fn main() -> io::Result<()> {
     let mut stdout = stdout();
@@ -33,12 +33,12 @@ fn main() -> io::Result<()> {
 
                     KeyCode::Backspace => { 
                         current.pop();
-                        print!("\x1b[2K\r λ {}", render_latex(&current));
+                        render_md(&current);
                         stdout.flush();
                     },
                     KeyCode::Char(c) => {
                         current.push(c);
-                        print!("\x1b[2K\r λ {}", render_latex(&current));
+                        render_md(&current);
                         stdout.flush();
                     }
                     _ => (),
