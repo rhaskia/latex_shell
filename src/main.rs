@@ -4,7 +4,7 @@ use crossterm::event::{KeyEventKind, KeyModifiers};
 use crossterm::{
     event::{poll, read, Event, KeyCode, KeyEvent},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use std::io::Write;
 use std::io::{self, stdout};
@@ -13,10 +13,11 @@ mod renderer;
 use renderer::render_latex;
 
 fn main() -> io::Result<()> {
-    enable_raw_mode()?; // Enable raw mode to capture input without buffering
-
     let mut stdout = stdout();
     let mut current = String::new();
+
+    enable_raw_mode()?; // Enable raw mode to capture input without buffering
+    execute!(stdout, EnterAlternateScreen);
 
     println!("welcome");
     print!("\x1b[2K\r λ ");
@@ -47,6 +48,7 @@ fn main() -> io::Result<()> {
     }
 
     disable_raw_mode()?; // Disable raw mode before exiting
+    execute!(stdout, LeaveAlternateScreen);
 
     Ok(())
 }

@@ -34,9 +34,9 @@ pub fn check_greek(letter: &str) -> Symbol {
     Symbol::Some(match letter {
         "alpha" => "\u{03b1}",
         "beta" => "\u{03b2}",
-        "lambda" => "\u{03b9}",
         "delta" => "\u{03b3}",
         "gamma" => "\u{03b4}",
+        "lambda" => "\u{03b9}",
         _ => return Symbol::None,
     }.to_string())
 }
