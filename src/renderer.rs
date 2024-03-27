@@ -1,4 +1,5 @@
 use markdown::*;
+use markdown::mdast::Node;
 use std::io::Write;
 use crossterm::execute;
 use crossterm::terminal::{Clear, ClearType, 
@@ -24,7 +25,7 @@ impl Drawer {
 
         execute!(&self.out, Clear(ClearType::All), MoveTo(0, 0));
 
-        println!("{tree:?}");
+        self.render_node(tree);
 
         self.out.flush();
     }
@@ -38,6 +39,21 @@ impl Drawer {
             disable_raw_mode();
         }
     } 
+
+    pub fn render_nodes(&mut self, nodes: Vec<Node>) {
+        for node in nodes {
+            self.render_node(node);
+        }
+    }
+
+    pub fn render_node(&mut self, node: Node) {
+        use mdast::Node::*;
+        match node {
+            Root(root) => self.render_nodes(root.children),
+            Paragraph(para) => self.render_nodes(para.children),
+            _ => println!("{node:?}")
+        }
+    }
 
     pub fn new() -> Self {
         Drawer { 
