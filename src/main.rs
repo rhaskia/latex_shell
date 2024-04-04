@@ -6,11 +6,14 @@ use std::io;
 
 mod renderer;
 use renderer::Drawer;
+mod editor;
+use editor::Editor;
 use markdown::to_mdast;
 use markdown::ParseOptions;
 
 fn main() -> io::Result<()> {
     let mut drawer = Drawer::new();
+    let mut editor = Editor::new();
 
     drawer.alt_screen(true)?;
 
@@ -23,13 +26,19 @@ fn main() -> io::Result<()> {
                     KeyCode::Char('d') if modifiers == ctrl => break,
                     KeyCode::Char('c') if modifiers == ctrl => break,
 
-                    KeyCode::Enter => drawer.new_line(),
-                    KeyCode::Backspace => drawer.backspace(),
-                    KeyCode::Char(c) => drawer.push(c),
+                    KeyCode::Up => editor.cursor_up(),
+                    KeyCode::Down => editor.cursor_down(),
+                    KeyCode::Left => editor.cursor_left(),
+                    KeyCode::Right => editor.cursor_right(),
+
+                    KeyCode::Enter => editor.new_line(),
+                    KeyCode::Backspace => editor.backspace(),
+                    KeyCode::Char(c) => editor.push(c),
 
                     _ => (),
                 }
-                drawer.render_md()?;
+
+                drawer.render_md(editor.get_file(), editor.get_cursor())?;
             }
         }
     }
