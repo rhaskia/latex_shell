@@ -1,5 +1,5 @@
 use markdown::*;
-use markdown::mdast::{Node, Heading, Text, Paragraph};
+use markdown::mdast::{Node, Heading, Text, Paragraph, ListItem};
 use markdown::unist::Position;
 use std::io::Write;
 use crossterm::execute;
@@ -130,8 +130,17 @@ impl Drawer {
             Root(root) => self.render_nodes(root.children),
             Paragraph(para) => self.render_para(para),
             Heading(head) => self.render_header(head),
+            List(list) => self.render_nodes(list.children),
+            ListItem(item) => self.render_list_item(item),
             _ => println!("{node:?}")
         };
+    }
+
+    pub fn render_list_item(&mut self, item: ListItem) {
+        let Position { start, end, .. } = item.position.unwrap();
+        self.ensure_scr_lines(end.line);
+        let children = self.render_children(item.children);
+        self.screen[start.line - 1] = Line::from(format!("* {}", children));
     }
 
     pub fn render_para(&mut self, para: Paragraph) {

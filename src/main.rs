@@ -6,6 +6,8 @@ use std::io;
 
 mod renderer;
 use renderer::Drawer;
+use markdown::to_mdast;
+use markdown::ParseOptions;
 
 fn main() -> io::Result<()> {
     let mut drawer = Drawer::new();
