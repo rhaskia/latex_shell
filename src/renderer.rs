@@ -45,7 +45,7 @@ impl Drawer {
 
         execute!(&self.out, Clear(ClearType::All), MoveTo(0, 0))?;
 
-        self.render_node(tree);
+        self.render_node(tree.clone());
         self.ensure_scr_lines(cursor.line + 1);
         let (mut draw_pos, mut cursor_draw) = (0, 0);
         for (idx, line) in self.screen.iter().enumerate() {
@@ -58,6 +58,7 @@ impl Drawer {
                 draw_pos += line.size;
             }
         }
+        print!("\n\r{:?}", tree);
         execute!(&self.out, MoveTo(cursor.col as u16, cursor_draw as u16))?;
         self.out.flush()?;
     }
@@ -102,7 +103,11 @@ impl Drawer {
         let Position { start, end, .. } = item.position.unwrap();
         self.ensure_scr_lines(end.line);
         let children = self.render_children(item.children);
-        self.screen[start.line - 1] = Line::from(format!("\u{f444} {}", children));
+        let mut lines = children.lines().enumerate();
+        self.screen[start.line - 1] = Line::from(lines.next().unwrap().1.to_string());
+        for (idx, line) in lines {
+            self.screen[start.line + idx - 1] = Line::from(line.to_string());
+        }
     }
 
     pub fn render_para(&mut self, para: Paragraph) {

@@ -15,35 +15,39 @@ fn main() -> io::Result<()> {
     let mut drawer = Drawer::new();
     let mut editor = Editor::new();
 
-    drawer.alt_screen(true)?;
+    let markdown = r#"# header \n\n\n\n* jsdkf\n**bold**\n"#;
+    let parser = pulldown_cmark::Parser::new(markdown);
+    println!("{:?}", parser);
 
-    loop {
-        if poll(std::time::Duration::from_millis(50))? {
-            if let Event::Key(KeyEvent { code, modifiers, kind: KeyEventKind::Press, .. }) = read()?
-            {
-                let ctrl = KeyModifiers::CONTROL;
-                match code {
-                    KeyCode::Char('d') if modifiers == ctrl => break,
-                    KeyCode::Char('c') if modifiers == ctrl => break,
-
-                    KeyCode::Up => editor.cursor_up(),
-                    KeyCode::Down => editor.cursor_down(),
-                    KeyCode::Left => editor.cursor_left(),
-                    KeyCode::Right => editor.cursor_right(),
-
-                    KeyCode::Enter => editor.new_line(),
-                    KeyCode::Backspace => editor.backspace(),
-                    KeyCode::Char(c) => editor.push(c),
-
-                    _ => (),
-                }
-
-                drawer.render_md(editor.get_file(), editor.get_cursor())?;
-            }
-        }
-    }
-
-    drawer.alt_screen(false)?;
+    // drawer.alt_screen(true)?;
+    //
+    // loop {
+    //     if poll(std::time::Duration::from_millis(50))? {
+    //         if let Event::Key(KeyEvent { code, modifiers, kind: KeyEventKind::Press, .. }) = read()?
+    //         {
+    //             let ctrl = KeyModifiers::CONTROL;
+    //             match code {
+    //                 KeyCode::Char('d') if modifiers == ctrl => break,
+    //                 KeyCode::Char('c') if modifiers == ctrl => break,
+    //
+    //                 KeyCode::Up => editor.cursor_up(),
+    //                 KeyCode::Down => editor.cursor_down(),
+    //                 KeyCode::Left => editor.cursor_left(),
+    //                 KeyCode::Right => editor.cursor_right(),
+    //
+    //                 KeyCode::Enter => editor.new_line(),
+    //                 KeyCode::Backspace => editor.backspace(),
+    //                 KeyCode::Char(c) => editor.push(c),
+    //
+    //                 _ => (),
+    //             }
+    //
+    //             drawer.render_md(editor.get_file(), editor.get_cursor())?;
+    //         }
+    //     }
+    // }
+    //
+    // drawer.alt_screen(false)?;
 
     Ok(())
 }
