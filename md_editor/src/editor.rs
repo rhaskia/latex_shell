@@ -1,5 +1,6 @@
 pub struct Editor {
     file: Vec<String>,
+    str_file: String,
     cursor: Cursor,
 }
 
@@ -12,10 +13,14 @@ pub struct Cursor {
 
 impl Editor {
     pub fn new() -> Self {
-        Editor { file: Vec::new(), cursor: Cursor { line: 0, col: 0, max_col: 0 } }
+        Editor { 
+            file: Vec::new(),
+            str_file: String::new(),
+            cursor: Cursor { line: 0, col: 0, max_col: 0 },
+        }
     }
 
-    pub fn get_file(&self) -> Vec<String> {
+    pub fn get_file(&mut self) -> Vec<String> {
         self.file.clone()
     }
 
@@ -31,7 +36,7 @@ impl Editor {
         // Backspace at start of line -> wraps
         if self.cursor.col == 0 {
             self.cursor.line -= 1;
-            self.cursor.col = self.file[self.cursor.col].len();
+            self.cursor.col = self.file[self.cursor.line].len();
             return;
         }
         self.file[self.cursor.line].remove(self.cursor.col - 1);
@@ -52,7 +57,7 @@ impl Editor {
     pub fn new_line(&mut self) {
         self.cursor.line += 1;
         self.cursor.col = 0;
-        self.ensure_file_lines(self.cursor.line + 1);
+        self.ensure_file_lines(self.cursor.line);
         self.file.insert(self.cursor.line, String::new());
     }
 
@@ -91,6 +96,7 @@ impl Editor {
         // normal movement
         self.cursor.col -= 1;
     }
+
     pub fn cursor_right(&mut self) {
         // wrapping
         if self.cursor.col >= self.file[self.cursor.line].len() {

@@ -1,15 +1,16 @@
+use crate::editor::Cursor;
 use crossterm::cursor::MoveTo;
 use crossterm::execute;
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen,
 };
 use fehler::throws;
-use markdown::mdast::{Heading, ListItem, Node, Paragraph, Text};
+use markdown::mdast::{Heading, List, ListItem, Node, Paragraph, Text};
 use markdown::unist::Position;
 use markdown::*;
 use std::io::Error;
 use std::io::Write;
-use crate::editor::Cursor;
+use latex_renderer::{render_latex, render_latex_inline};
 
 pub struct Drawer {
     out: std::io::Stdout,
@@ -36,6 +37,18 @@ impl Line {
         Line { inner: s, size: 2 }
     }
 }
+
+const DOUBLE_TOP: &str = "\x1b#3";
+const DOUBLE_BOTTOM: &str = "\x1b#4";
+
+const EM: &str = "\x1b[3m";
+const END_EM: &str = "\x1b[23m";
+
+const STRONG: &str = "\x1b[1m";
+const END_STRONG: &str = "\x1b[22m";
+
+const GREY: &str = "\x1b[90m";
+const WHITE: &str = "\x1b[37m";
 
 impl Drawer {
     #[throws]
@@ -93,18 +106,31 @@ impl Drawer {
             Root(root) => self.render_nodes(root.children),
             Paragraph(para) => self.render_para(para),
             Heading(head) => self.render_header(head),
-            List(list) => self.render_nodes(list.children),
-            ListItem(item) => self.render_list_item(item),
+            List(list) => self.render_list(list),
             _ => println!("{node:?}"),
         };
     }
 
-    pub fn render_list_item(&mut self, item: ListItem) {
+    pub fn render_list(&mut self, list: List) {
+        let dot = format!("{GREY}\u{f444}{WHITE}");
+        for (idx, child) in list.children.iter().enumerate() {
+            let li = if let Node::ListItem(li) = child {
+                li
+            } else {
+                panic!("Non-ListItem in List");
+            };
+
+            let marker = if list.ordered { format!("{}.", idx + 1) } else { dot.clone() };
+            self.render_list_item(li.clone(), &marker);
+        }
+    }
+
+    pub fn render_list_item(&mut self, item: ListItem, marker: &str) {
         let Position { start, end, .. } = item.position.unwrap();
         self.ensure_scr_lines(end.line);
-        let children = self.render_children(item.children);
-        let mut lines = children.lines().enumerate();
-        self.screen[start.line - 1] = Line::from(lines.next().unwrap().1.to_string());
+        let children = format!("{marker} {}", self.render_children(item.children));
+
+        let lines = children.lines().enumerate();
         for (idx, line) in lines {
             self.screen[start.line + idx - 1] = Line::from(line.to_string());
         }
@@ -127,8 +153,8 @@ impl Drawer {
         use mdast::Node::*;
         match child {
             Text(text) => text.value,
-            Emphasis(text) => format!("\x1b[3m{}\x1b[23m", self.render_children(text.children)),
-            Strong(text) => format!("\x1b[1m{}\x1b[22m", self.render_children(text.children)),
+            Emphasis(text) => format!("{EM}{}{END_EM}", self.render_children(text.children)),
+            Strong(text) => format!("{STRONG}{}{END_STRONG}", self.render_children(text.children)),
 
             BlockQuote(_) => todo!(),
             FootnoteDefinition(_) => todo!(),
@@ -137,7 +163,7 @@ impl Drawer {
             Yaml(_) => todo!(),
             Break(_) => todo!(),
             InlineCode(_) => todo!(),
-            InlineMath(_) => todo!(),
+            InlineMath(math) => render_latex_inline(math),
             Delete(del) => format!("\x1b[9m]{}\x1b[29m", self.render_children(del.children)),
             FootnoteReference(_) => todo!(),
             Html(_) => todo!(),
@@ -146,7 +172,7 @@ impl Drawer {
             Link(_) => todo!(),
             LinkReference(_) => todo!(),
             Code(_) => todo!(),
-            Math(_) => todo!(),
+            Math(math) => render_latex(math),
             Heading(_) => todo!(),
             Table(_) => todo!(),
             ThematicBreak(_) => todo!(),
@@ -178,10 +204,6 @@ impl Drawer {
     pub fn new() -> Self {
         let mut md_opt = ParseOptions::default();
         md_opt.constructs.math_text = true;
-        Drawer {
-            out: std::io::stdout(),
-            md_opt,
-            screen: Vec::new(),
-        }
+        Drawer { out: std::io::stdout(), md_opt, screen: Vec::new() }
     }
 }
