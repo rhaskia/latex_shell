@@ -45,8 +45,19 @@ pub fn render_macro(content: String, args: Vec<Node>) -> Symbol {
     check_greek(&content)?;
     check_ord(&content)?;
     check_bin(&content)?;
+    check_func(&content, &rendered_args)?;
 
     Symbol::Unknown(content, rendered_args)
+}
+
+pub fn check_func(func: &str, args: &Vec<String>) -> Symbol {
+    Symbol::Some(
+        match func {
+            "frac" => format!("{}/{}", args[0], args[1]),
+
+            _ => return Symbol::None,
+        }
+    )
 }
 
 pub fn check_ord(ord: &str) -> Symbol {
@@ -133,14 +144,14 @@ impl Try for Symbol {
     type Output = ();
     type Residual = String;
 
-    fn from_output(output: Self::Output) -> Self {
+    fn from_output(_: Self::Output) -> Self {
         Symbol::None
     }
 
     fn branch(self) -> ControlFlow<Self::Residual, Self::Output> {
         match self {
             Symbol::Some(sym) => ControlFlow::Break(sym),
-            Symbol::Unknown(sym, args) => ControlFlow::Break(sym),
+            Symbol::Unknown(sym, _) => ControlFlow::Break(sym),
             Symbol::None => ControlFlow::Continue(()),
         }
     }

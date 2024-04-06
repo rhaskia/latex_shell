@@ -5,12 +5,12 @@ use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen,
 };
 use fehler::throws;
-use markdown::mdast::{Heading, List, ListItem, Node, Paragraph, Text};
+use latex_renderer::{render_latex, render_latex_inline};
+use markdown::mdast::{Heading, List, ListItem, Node, Paragraph, Table};
 use markdown::unist::Position;
 use markdown::*;
 use std::io::Error;
 use std::io::Write;
-use latex_renderer::{render_latex, render_latex_inline};
 
 pub struct Drawer {
     out: std::io::Stdout,
@@ -60,6 +60,7 @@ impl Drawer {
 
         self.render_node(tree.clone());
         self.ensure_scr_lines(cursor.line + 1);
+
         let (mut draw_pos, mut cursor_draw) = (0, 0);
         for (idx, line) in self.screen.iter().enumerate() {
             if idx == cursor.line {
@@ -71,6 +72,7 @@ impl Drawer {
                 draw_pos += line.size;
             }
         }
+
         print!("\n\r{:?}", tree);
         execute!(&self.out, MoveTo(cursor.col as u16, cursor_draw as u16))?;
         self.out.flush()?;
@@ -107,8 +109,58 @@ impl Drawer {
             Paragraph(para) => self.render_para(para),
             Heading(head) => self.render_header(head),
             List(list) => self.render_list(list),
+            Table(table) => self.render_table(table),
             _ => println!("{node:?}"),
         };
+    }
+
+    pub fn render_table(&mut self, table: Table) {
+        let Position { start, end, .. } = table.position.unwrap();
+        self.ensure_scr_lines(end.line);
+
+        let mut rows = Vec::new();
+        for (row_idx, row) in table.children.iter().enumerate() {
+            let row =
+                if let Node::TableRow(tr) = row { tr } else { panic!("Non-TableRow in table") };
+            rows.push((Vec::new(), row.position.clone().unwrap().start.line));
+
+            for cell in row.children.iter() {
+                let cell = if let Node::TableCell(tc) = cell {
+                    tc
+                } else {
+                    panic!("Non-TableCell in table")
+                };
+                let children = self.render_children(cell.children.clone());
+                rows[row_idx].0.push(children);
+            }
+        }
+
+        let mut col_widths: Vec<usize> = vec![0; rows[0].0.len()];
+        for row in rows.iter() {
+            for (i, cell) in row.0.iter().enumerate() {
+                col_widths[i] = (*col_widths.get(i).unwrap_or(&0)).max(cell.len());
+            }
+        }
+
+        // seperator line
+        self.screen[start.line] = Line::from(self.table_sep(col_widths.clone()));
+
+        // actual table rendering
+        for (row, row_idx) in rows {
+            self.screen[row_idx - 1] = Line::from(self.render_table_row(row, col_widths.clone()));
+        }
+    }
+
+    pub fn table_sep(&self, widths: Vec<usize>) -> String {
+        let parts: Vec<String> = widths.iter().map(|w| format!("{:─^1$}", "", w + 2)).collect();
+        format!("├{}┤", parts.join("┼"))
+    }
+
+    pub fn render_table_row(&mut self, row: Vec<String>, widths: Vec<usize>) -> String {
+        let spaced =
+            row.iter().zip(widths).map(|(r, w)| format!("{:^1$}", r, w)).collect::<Vec<String>>();
+        let conjoined = spaced.join(" │ ");
+        format!("│ {conjoined} │")
     }
 
     pub fn render_list(&mut self, list: List) {
@@ -158,7 +210,6 @@ impl Drawer {
 
             BlockQuote(_) => todo!(),
             FootnoteDefinition(_) => todo!(),
-            List(_) => todo!(),
             Toml(_) => todo!(),
             Yaml(_) => todo!(),
             Break(_) => todo!(),
@@ -198,11 +249,12 @@ impl Drawer {
         let Position { start, end, .. } = header.position.unwrap();
         self.ensure_scr_lines(end.line);
         let inner = self.render_children(header.children);
-        self.screen[start.line - 1] = Line::double(format!("\x1b#3{inner}\r\n\x1b#4{inner}"));
+        self.screen[start.line - 1] =
+            Line::double(format!("{DOUBLE_TOP}{inner}\r\n{DOUBLE_BOTTOM}{inner}"));
     }
 
     pub fn new() -> Self {
-        let mut md_opt = ParseOptions::default();
+        let mut md_opt = ParseOptions::gfm();
         md_opt.constructs.math_text = true;
         Drawer { out: std::io::stdout(), md_opt, screen: Vec::new() }
     }

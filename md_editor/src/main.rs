@@ -7,18 +7,16 @@ use std::io::{self, stdout};
 mod renderer;
 use renderer::Drawer;
 mod editor;
-use editor::Editor;
-use crossterm::terminal::{
-    disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen,
-};
 use crossterm::cursor::MoveTo;
+use crossterm::terminal::{Clear, ClearType};
+use editor::Editor;
 
 fn main() -> io::Result<()> {
     let mut drawer = Drawer::new();
     let mut editor = Editor::new();
 
     drawer.alt_screen(true)?;
-    
+
     loop {
         if poll(std::time::Duration::from_millis(50))? {
             if let Event::Key(KeyEvent { code, modifiers, kind: KeyEventKind::Press, .. }) = read()?
@@ -42,7 +40,7 @@ fn main() -> io::Result<()> {
 
                 crossterm::execute!(stdout(), Clear(ClearType::All), MoveTo(0, 0))?;
 
-                drawer.render_md(editor.get_file(), editor.get_cursor());
+                drawer.render_md(editor.get_file(), editor.get_cursor())?;
             }
         }
     }

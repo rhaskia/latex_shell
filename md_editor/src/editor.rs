@@ -1,6 +1,5 @@
 pub struct Editor {
     file: Vec<String>,
-    str_file: String,
     cursor: Cursor,
 }
 
@@ -15,7 +14,6 @@ impl Editor {
     pub fn new() -> Self {
         Editor { 
             file: Vec::new(),
-            str_file: String::new(),
             cursor: Cursor { line: 0, col: 0, max_col: 0 },
         }
     }
