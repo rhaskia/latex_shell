@@ -6,7 +6,7 @@ use crossterm::terminal::{
 };
 use fehler::throws;
 use latex_renderer::{render_latex, render_latex_inline};
-use markdown::mdast::{Heading, List, ListItem, Node, Paragraph, Table};
+use markdown::mdast::{Heading, List, ListItem, Node, Paragraph, Table, ThematicBreak};
 use markdown::unist::Position;
 use markdown::*;
 use std::io::Error;
@@ -16,6 +16,7 @@ pub struct Drawer {
     out: std::io::Stdout,
     screen: Vec<Line>,
     md_opt: ParseOptions,
+    max_width: usize,
 }
 
 #[derive(Clone)]
@@ -51,6 +52,16 @@ const GREY: &str = "\x1b[90m";
 const WHITE: &str = "\x1b[37m";
 
 impl Drawer {
+    pub fn new() -> Self {
+        let mut md_opt = ParseOptions::gfm();
+        md_opt.constructs.math_text = true;
+        Drawer { out: std::io::stdout(), md_opt, screen: Vec::new(), max_width: 10 }
+    }
+
+    pub fn resize(&mut self, rows: usize, cols: usize) {
+        self.max_width = rows;
+    }
+
     #[throws]
     pub fn render_md(&mut self, file: Vec<String>, cursor: Cursor) {
         self.screen = Vec::new();
@@ -110,8 +121,16 @@ impl Drawer {
             Heading(head) => self.render_header(head),
             List(list) => self.render_list(list),
             Table(table) => self.render_table(table),
+            ThematicBreak(br) => self.render_break(br),
             _ => println!("{node:?}"),
         };
+    }
+
+    pub fn render_break(&mut self, br: ThematicBreak) {
+        let Position { start, end, .. } = br.position.unwrap();
+        self.ensure_scr_lines(end.line);
+
+        self.screen[start.line - 1] = Line::from(format!(" {:─^1$} ", "", self.max_width - 2));
     }
 
     pub fn render_table(&mut self, table: Table) {
@@ -224,8 +243,6 @@ impl Drawer {
             LinkReference(_) => todo!(),
             Code(_) => todo!(),
             Math(math) => render_latex(math),
-            Heading(_) => todo!(),
-            Table(_) => todo!(),
             ThematicBreak(_) => todo!(),
 
             TableRow(_) => todo!(),
@@ -251,11 +268,5 @@ impl Drawer {
         let inner = self.render_children(header.children);
         self.screen[start.line - 1] =
             Line::double(format!("{DOUBLE_TOP}{inner}\r\n{DOUBLE_BOTTOM}{inner}"));
-    }
-
-    pub fn new() -> Self {
-        let mut md_opt = ParseOptions::gfm();
-        md_opt.constructs.math_text = true;
-        Drawer { out: std::io::stdout(), md_opt, screen: Vec::new() }
     }
 }

@@ -18,6 +18,16 @@ impl Editor {
         }
     }
 
+    pub fn paste(&mut self, to_paste: String) {
+        println!("PASTED");
+        // if to_paste == String::new() { return; }
+        // let (start, end) = self.file[self.cursor.line].split_at(self.cursor.col);
+        // let inserted = format!("{start}{to_paste}{end}");
+        // let mut lines = inserted.lines();
+        // let first = lines.next(); 
+        //self.file[self.cursor.line] = first.unwrap().to_string();
+    }
+
     pub fn get_file(&mut self) -> Vec<String> {
         self.file.clone()
     }
@@ -33,8 +43,10 @@ impl Editor {
         }
         // Backspace at start of line -> wraps
         if self.cursor.col == 0 {
+            let line_to_move = self.file.remove(self.cursor.line);
             self.cursor.line -= 1;
             self.cursor.col = self.file[self.cursor.line].len();
+            self.file[self.cursor.line].push_str(&line_to_move);
             return;
         }
         self.file[self.cursor.line].remove(self.cursor.col - 1);
@@ -53,10 +65,13 @@ impl Editor {
     }
 
     pub fn new_line(&mut self) {
+        let split = self.file[self.cursor.line].split_at(self.cursor.col);
+        let (start, end) = (split.0.to_string(), split.1.to_string());
+        self.file[self.cursor.line] = start;
         self.cursor.line += 1;
         self.cursor.col = 0;
         self.ensure_file_lines(self.cursor.line);
-        self.file.insert(self.cursor.line, String::new());
+        self.file.insert(self.cursor.line, end);
     }
 
     pub fn ensure_file_lines(&mut self, lines: usize) {
