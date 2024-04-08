@@ -241,9 +241,8 @@ impl Drawer {
             ImageReference(_) => todo!(),
             Link(_) => todo!(),
             LinkReference(_) => todo!(),
-            Code(_) => todo!(),
+            Code(_) => self.render_code(),
             Math(math) => render_latex(math),
-            ThematicBreak(_) => todo!(),
 
             TableRow(_) => todo!(),
             TableCell(_) => todo!(),
@@ -261,6 +260,8 @@ impl Drawer {
             _ => panic!("Node should not show nested: {:?}", child),
         }
     }
+
+    pub fn render_code(&mut self) -> String { String::new() }
 
     pub fn render_header(&mut self, header: Heading) {
         let Position { start, end, .. } = header.position.unwrap();
