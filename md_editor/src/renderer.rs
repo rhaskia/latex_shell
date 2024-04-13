@@ -6,9 +6,9 @@ use crossterm::terminal::{
 };
 use fehler::throws;
 use latex_renderer::{render_latex, render_latex_inline};
-use markdown::mdast::{Heading, List, ListItem, Node, Paragraph, Table, ThematicBreak};
+use markdown::mdast::*;
 use markdown::unist::Position;
-use markdown::*;
+use markdown::{to_mdast, ParseOptions, mdast};
 use std::io::Error;
 use std::io::Write;
 
@@ -122,6 +122,7 @@ impl Drawer {
             List(list) => self.render_list(list),
             Table(table) => self.render_table(table),
             ThematicBreak(br) => self.render_break(br),
+            FootnoteDefinition(foot_def) => self.render_footnote_def(foot_def),
             _ => println!("{node:?}"),
         };
     }
@@ -131,6 +132,17 @@ impl Drawer {
         self.ensure_scr_lines(end.line);
 
         self.screen[start.line - 1] = Line::from(format!(" {:─^1$} ", "", self.max_width - 2));
+    }
+
+    pub fn render_footnote_def(&mut self, foot_def: FootnoteDefinition) {
+        let Position { start, end, .. } = foot_def.position.unwrap();
+        self.ensure_scr_lines(end.line);
+
+        let mut children = self.render_children(foot_def.children);
+        children = format!("{}. {}", foot_def.identifier, children);
+        for (idx, line) in children.lines().enumerate() {
+            self.screen[start.line + idx - 1] = Line::from(line.to_string());
+        }
     }
 
     pub fn render_table(&mut self, table: Table) {
@@ -226,27 +238,22 @@ impl Drawer {
             Text(text) => text.value,
             Emphasis(text) => format!("{EM}{}{END_EM}", self.render_children(text.children)),
             Strong(text) => format!("{STRONG}{}{END_STRONG}", self.render_children(text.children)),
+            Delete(del) => format!("\x1b[9m]{}\x1b[29m", self.render_children(del.children)),
 
             BlockQuote(_) => todo!(),
-            FootnoteDefinition(_) => todo!(),
             Toml(_) => todo!(),
             Yaml(_) => todo!(),
             Break(_) => todo!(),
             InlineCode(_) => todo!(),
             InlineMath(math) => render_latex_inline(math),
-            Delete(del) => format!("\x1b[9m]{}\x1b[29m", self.render_children(del.children)),
-            FootnoteReference(_) => todo!(),
+            FootnoteReference(footnote) => self.render_footnote(footnote),
             Html(_) => todo!(),
-            Image(_) => todo!(),
+            Image(image) => self.render_image(image),
             ImageReference(_) => todo!(),
-            Link(_) => todo!(),
-            LinkReference(_) => todo!(),
+            Link(link) => self.render_link(link),
+            LinkReference(linkref) => self.render_link_ref(linkref),
             Code(_) => todo!(),
             Math(math) => render_latex(math),
-            ThematicBreak(_) => todo!(),
-
-            TableRow(_) => todo!(),
-            TableCell(_) => todo!(),
 
             ListItem(_) => todo!(),
             Definition(_) => todo!(),
@@ -262,6 +269,14 @@ impl Drawer {
         }
     }
 
+    pub fn render_footnote(&mut self, footnote: FootnoteReference) -> String {
+        format!("\x1b[73m\x1b[94m[{}]\x1b[75m\x1b[m", footnote.identifier)
+    }
+
+    pub fn render_image(&mut self, image: Image) -> String {
+        String::new()
+    }
+
     pub fn render_header(&mut self, header: Heading) {
         let Position { start, end, .. } = header.position.unwrap();
         self.ensure_scr_lines(end.line);
@@ -269,4 +284,22 @@ impl Drawer {
         self.screen[start.line - 1] =
             Line::double(format!("{DOUBLE_TOP}{inner}\r\n{DOUBLE_BOTTOM}{inner}"));
     }
+
+    pub fn render_link(&mut self, link: Link) -> String {
+        let children = self.render_children(link.children);
+        format!("\x1b[95m\x1b]8;;{}\x1b\\{}\x1b]8;;\x1b\\\x1b[0m", link.url, children)
+    }    
+
+    pub fn render_link_ref(&mut self, linkref: LinkReference) -> String {
+        let children = self.render_children(linkref.children);
+        let url = match linkref.reference_kind {
+            ReferenceKind::Shortcut => todo!(),
+            ReferenceKind::Collapsed => todo!(),
+            ReferenceKind::Full => todo!(),
+        };
+        let url = String::new();
+
+        format!("\x1b[95m\x1b]8;;{}\x1b\\{}\x1b]8;;\x1b[0m", children, url);
+    }
+
 }

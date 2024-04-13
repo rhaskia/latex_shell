@@ -56,7 +56,7 @@ impl Editor {
     pub fn push(&mut self, c: char) {
         self.ensure_file_lines(self.cursor.line);
         // If the cursor is at the end of the line insert panics
-        if self.cursor.col + 1 >= self.file[self.cursor.line].len() {
+        if self.cursor.col >= self.file[self.cursor.line].len() {
             self.file[self.cursor.line].push(c)
         } else {
             self.file[self.cursor.line].insert(self.cursor.col, c);
@@ -70,6 +70,7 @@ impl Editor {
         self.file[self.cursor.line] = start;
         self.cursor.line += 1;
         self.cursor.col = 0;
+        self.cursor.max_col = 0;
         self.ensure_file_lines(self.cursor.line);
         self.file.insert(self.cursor.line, end);
     }
@@ -82,18 +83,21 @@ impl Editor {
     }
 
     pub fn cursor_up(&mut self) {
-        if self.cursor.line != 0 {
-            self.cursor.max_col = self.cursor.col;
-            self.cursor.line -= 1;
-            self.cursor.col = self.cursor.max_col.min(self.file[self.cursor.line].len());
+        if self.cursor.line == 0 {
+            return 
         }
+        self.cursor.max_col = self.cursor.max_col.max(self.cursor.col);
+        self.cursor.line -= 1;
+        self.cursor.col = self.cursor.max_col.min(self.file[self.cursor.line].len());
     }
 
     pub fn cursor_down(&mut self) {
         if (self.cursor.line + 2) >= self.file.len() {
             return;
         }
-        self.cursor.line += 1
+        self.cursor.max_col = self.cursor.max_col.max(self.cursor.col);
+        self.cursor.line += 1;
+        self.cursor.col = self.cursor.max_col.min(self.file[self.cursor.line].len());
     }
 
     pub fn cursor_left(&mut self) {
@@ -108,6 +112,7 @@ impl Editor {
         }
         // normal movement
         self.cursor.col -= 1;
+        self.cursor.max_col = self.cursor.col; 
     }
 
     pub fn cursor_right(&mut self) {
@@ -122,5 +127,6 @@ impl Editor {
         }
         // normal movement
         self.cursor.col += 1;
+        self.cursor.max_col = self.cursor.col; 
     }
 }
