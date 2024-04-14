@@ -95,7 +95,7 @@ impl Editor {
         if (self.cursor.line + 2) >= self.file.len() {
             return;
         }
-        self.cursor.max_col = self.cursor.max_col.max(self.cursor.col);
+        self.cursor.max_col = self.cursor.col;
         self.cursor.line += 1;
         self.cursor.col = self.cursor.max_col.min(self.file[self.cursor.line].len());
     }

@@ -255,6 +255,9 @@ impl Drawer {
             Code(_) => todo!(),
             Math(math) => render_latex(math),
 
+            TableRow(_) => todo!(),
+            TableCell(_) => todo!(),
+
             ListItem(_) => todo!(),
             Definition(_) => todo!(),
 
@@ -276,6 +279,7 @@ impl Drawer {
     pub fn render_image(&mut self, image: Image) -> String {
         String::new()
     }
+    pub fn render_code(&mut self) -> String { String::new() }
 
     pub fn render_header(&mut self, header: Heading) {
         let Position { start, end, .. } = header.position.unwrap();
