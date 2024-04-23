@@ -17,6 +17,7 @@ pub struct Drawer {
     screen: Vec<Line>,
     md_opt: ParseOptions,
     max_width: usize,
+    cached_images: Vec<Image>,
 }
 
 #[derive(Clone)]
@@ -55,7 +56,7 @@ impl Drawer {
     pub fn new() -> Self {
         let mut md_opt = ParseOptions::gfm();
         md_opt.constructs.math_text = true;
-        Drawer { out: std::io::stdout(), md_opt, screen: Vec::new(), max_width: 10 }
+        Drawer { out: std::io::stdout(), md_opt, screen: Vec::new(), max_width: 10, cached_images: Vec::new() }
     }
 
     pub fn resize(&mut self, rows: usize, cols: usize) {
@@ -277,6 +278,16 @@ impl Drawer {
     }
 
     pub fn render_image(&mut self, image: Image) -> String {
+        let conf = viuer::Config {
+            // set offset
+            x: 20,
+            y: 4,
+            // set dimensions
+            width: Some(80),
+            height: Some(25),
+            ..Default::default()
+        };
+
         String::new()
     }
     pub fn render_code(&mut self) -> String { String::new() }
