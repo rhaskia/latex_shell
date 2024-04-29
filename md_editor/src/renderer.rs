@@ -94,6 +94,7 @@ impl Drawer {
 
                 if let Some(images) = self.images.get(&idx) {
                     print_from_file(&images[0], &conf).unwrap();
+                    draw_pos += 10;
                 }
             }
         }
@@ -298,7 +299,7 @@ impl Drawer {
         //     }
         // }
         let url = image.url.clone();
-        self.images.entry(start.line).or_insert(Vec::new()).push(url);
+        self.images.entry(start.line - 1).or_insert(Vec::new()).push(url);
         String::new()
     }
     pub fn render_code(&mut self) -> String {
