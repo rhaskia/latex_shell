@@ -8,16 +8,18 @@ use fehler::throws;
 use latex_renderer::{render_latex, render_latex_inline};
 use markdown::mdast::*;
 use markdown::unist::Position;
-use markdown::{to_mdast, ParseOptions, mdast};
+use markdown::{mdast, to_mdast, ParseOptions};
 use std::io::Error;
 use std::io::Write;
+use viuer::{print_from_file, Config};
+use std::collections::HashMap;
 
 pub struct Drawer {
     out: std::io::Stdout,
     screen: Vec<Line>,
     md_opt: ParseOptions,
     max_width: usize,
-    cached_images: Vec<Image>,
+    images: HashMap<usize, Vec<String>>,
 }
 
 #[derive(Clone)]
@@ -56,7 +58,13 @@ impl Drawer {
     pub fn new() -> Self {
         let mut md_opt = ParseOptions::gfm();
         md_opt.constructs.math_text = true;
-        Drawer { out: std::io::stdout(), md_opt, screen: Vec::new(), max_width: 10, cached_images: Vec::new() }
+        Drawer {
+            out: std::io::stdout(),
+            md_opt,
+            screen: Vec::new(),
+            max_width: 10,
+            images: HashMap::new(),
+        }
     }
 
     pub fn resize(&mut self, rows: usize, cols: usize) {
@@ -72,6 +80,7 @@ impl Drawer {
 
         self.render_node(tree.clone());
         self.ensure_scr_lines(cursor.line + 1);
+        let mut conf = Config { height: Some(10), ..Default::default() };
 
         let (mut draw_pos, mut cursor_draw) = (0, 0);
         for (idx, line) in self.screen.iter().enumerate() {
@@ -82,6 +91,10 @@ impl Drawer {
             } else {
                 print!("{}\r\n", line.inner);
                 draw_pos += line.size;
+
+                if let Some(images) = self.images.get(&idx) {
+                    print_from_file(&images[0], &conf).unwrap();
+                }
             }
         }
 
@@ -278,19 +291,19 @@ impl Drawer {
     }
 
     pub fn render_image(&mut self, image: Image) -> String {
-        let conf = viuer::Config {
-            // set offset
-            x: 20,
-            y: 4,
-            // set dimensions
-            width: Some(80),
-            height: Some(25),
-            ..Default::default()
-        };
-
+        let Position { start, end, .. } = image.position.unwrap();
+        // if let Ok(r) = std::fs::try_exists(&image.url) {
+        //     if r {
+        //         return format!("invalid image");
+        //     }
+        // }
+        let url = image.url.clone();
+        self.images.entry(start.line).or_insert(Vec::new()).push(url);
         String::new()
     }
-    pub fn render_code(&mut self) -> String { String::new() }
+    pub fn render_code(&mut self) -> String {
+        String::new()
+    }
 
     pub fn render_header(&mut self, header: Heading) {
         let Position { start, end, .. } = header.position.unwrap();
@@ -303,7 +316,7 @@ impl Drawer {
     pub fn render_link(&mut self, link: Link) -> String {
         let children = self.render_children(link.children);
         format!("\x1b[95m\x1b]8;;{}\x1b\\{}\x1b]8;;\x1b\\\x1b[0m", link.url, children)
-    }    
+    }
 
     pub fn render_link_ref(&mut self, linkref: LinkReference) -> String {
         let children = self.render_children(linkref.children);
@@ -316,5 +329,4 @@ impl Drawer {
 
         format!("\x1b[95m\x1b]8;;{}\x1b\\{}\x1b]8;;\x1b[0m", children, url);
     }
-
 }

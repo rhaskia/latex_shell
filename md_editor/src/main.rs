@@ -1,3 +1,4 @@
+#![feature(fs_try_exists)] 
 #![feature(try_trait_v2)]
 
 use crossterm::event::{poll, read, Event, KeyCode, KeyEvent};
